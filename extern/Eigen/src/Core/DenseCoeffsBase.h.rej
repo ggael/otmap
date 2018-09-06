@@ -1,0 +1,75 @@
+***************
+*** 133,148 ****
+        *
+        * \sa operator[](Index) const, coeffRef(Index), coeff(Index,Index) const
+        */
+  
+      EIGEN_DEVICE_FUNC
+      EIGEN_STRONG_INLINE CoeffReturnType
+      coeff(Index index) const
+      {
+        eigen_internal_assert(index >= 0 && index < size());
+        return typename internal::evaluator<Derived>::type(derived()).coeff(index);
+      }
+  
+  
+      /** \returns the coefficient at given index.
+        *
+        * This method is allowed only for vector expressions, and for matrix expressions having the LinearAccessBit.
+--- 133,151 ----
+        *
+        * \sa operator[](Index) const, coeffRef(Index), coeff(Index,Index) const
+        */
+  
+      EIGEN_DEVICE_FUNC
+      EIGEN_STRONG_INLINE CoeffReturnType
+      coeff(Index index) const
+      {
++       EIGEN_STATIC_ASSERT(Derived::Flags & LinearAccessBit,
++                     THIS_COEFFICIENT_ACCESSOR_TAKING_ONE_ACCESS_IS_ONLY_FOR_EXPRESSIONS_ALLOWING_LINEAR_ACCESS)
++ 
+        eigen_internal_assert(index >= 0 && index < size());
+        return typename internal::evaluator<Derived>::type(derived()).coeff(index);
+      }
+  
+  
+      /** \returns the coefficient at given index.
+        *
+        * This method is allowed only for vector expressions, and for matrix expressions having the LinearAccessBit.
+***************
+*** 363,378 ****
+        *
+        * \sa operator[](Index), coeff(Index) const, coeffRef(Index,Index)
+        */
+  
+      EIGEN_DEVICE_FUNC
+      EIGEN_STRONG_INLINE Scalar&
+      coeffRef(Index index)
+      {
+        eigen_internal_assert(index >= 0 && index < size());
+        return typename internal::evaluator<Derived>::type(derived()).coeffRef(index);
+      }
+  
+      /** \returns a reference to the coefficient at given index.
+        *
+        * This method is allowed only for vector expressions, and for matrix expressions having the LinearAccessBit.
+        *
+--- 366,383 ----
+        *
+        * \sa operator[](Index), coeff(Index) const, coeffRef(Index,Index)
+        */
+  
+      EIGEN_DEVICE_FUNC
+      EIGEN_STRONG_INLINE Scalar&
+      coeffRef(Index index)
+      {
++       EIGEN_STATIC_ASSERT(Derived::Flags & LinearAccessBit,
++                           THIS_COEFFICIENT_ACCESSOR_TAKING_ONE_ACCESS_IS_ONLY_FOR_EXPRESSIONS_ALLOWING_LINEAR_ACCESS)
+        eigen_internal_assert(index >= 0 && index < size());
+        return typename internal::evaluator<Derived>::type(derived()).coeffRef(index);
+      }
+  
+      /** \returns a reference to the coefficient at given index.
+        *
+        * This method is allowed only for vector expressions, and for matrix expressions having the LinearAccessBit.
+        *

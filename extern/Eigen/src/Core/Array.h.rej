@@ -1,0 +1,19 @@
+--- Array.h
++++ Array.h
+@@ -130,14 +130,14 @@
+ #endif
+ 
+ #ifdef EIGEN_HAVE_RVALUE_REFERENCES
+-    Array(Array&& other)
++    Array(Array&& other) EIGEN_NOEXCEPT_IF(std::is_nothrow_move_assignable<Scalar>::value)
+       : Base(std::move(other))
+     {
+       Base::_check_template_params();
+       if (RowsAtCompileTime!=Dynamic && ColsAtCompileTime!=Dynamic)
+         Base::_set_noalias(other);
+     }
+-    Array& operator=(Array&& other)
++    Array& operator=(Array&& other) EIGEN_NOEXCEPT_IF(std::is_nothrow_move_assignable<Scalar>::value)
+     {
+       other.swap(*this);
+       return *this;

@@ -1,0 +1,19 @@
+--- Matrix.h
++++ Matrix.h
+@@ -218,14 +218,14 @@
+     { Base::_check_template_params(); EIGEN_INITIALIZE_COEFFS_IF_THAT_OPTION_IS_ENABLED }
+ 
+ #ifdef EIGEN_HAVE_RVALUE_REFERENCES
+-    Matrix(Matrix&& other)
++    Matrix(Matrix&& other) EIGEN_NOEXCEPT_IF(std::is_nothrow_move_assignable<Scalar>::value)
+       : Base(std::move(other))
+     {
+       Base::_check_template_params();
+       if (RowsAtCompileTime!=Dynamic && ColsAtCompileTime!=Dynamic)
+         Base::_set_noalias(other);
+     }
+-    Matrix& operator=(Matrix&& other)
++    Matrix& operator=(Matrix&& other) EIGEN_NOEXCEPT_IF(std::is_nothrow_move_assignable<Scalar>::value)
+     {
+       other.swap(*this);
+       return *this;

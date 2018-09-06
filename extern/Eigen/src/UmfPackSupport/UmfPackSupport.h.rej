@@ -1,0 +1,18 @@
+***************
+*** 238
+-       * The given matrix must has the same sparcity than the matrix on which the pattern anylysis has been performed.
+--- 275 -----
++       * The given matrix must has the same sparsity than the matrix on which the pattern analysis has been performed.
+***************
+*** 287,289
+-       int errorCode;
+-       errorCode = umfpack_numeric(m_outerIndexPtr, m_innerIndexPtr, m_valuePtr,
+-                                   m_symbolic, &m_numeric, 0, 0);
+--- 325,326 -----
++       m_fact_errorCode = umfpack_numeric(m_outerIndexPtr, m_innerIndexPtr, m_valuePtr,
++                                          m_symbolic, &m_numeric, m_control.data(), 0);
+***************
+*** 369
+-         &x.col(j).coeffRef(0), &b.const_cast_derived().col(j).coeffRef(0), m_numeric, 0, 0);
+--- 409 -----
++         &x.col(j).coeffRef(0), &b.const_cast_derived().col(j).coeffRef(0), m_numeric, m_control.data(), 0);

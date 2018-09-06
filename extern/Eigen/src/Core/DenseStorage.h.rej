@@ -1,0 +1,51 @@
+--- DenseStorage.h
++++ DenseStorage.h
+@@ -298,14 +298,14 @@
+       return *this;
+     }
+ #ifdef EIGEN_HAVE_RVALUE_REFERENCES
+-    DenseStorage(DenseStorage&& other)
++    DenseStorage(DenseStorage&& other) EIGEN_NOEXCEPT
+       : m_data(std::move(other.m_data))
+       , m_rows(std::move(other.m_rows))
+       , m_cols(std::move(other.m_cols))
+     {
+       other.m_data = nullptr;
+     }
+-    DenseStorage& operator=(DenseStorage&& other)
++    DenseStorage& operator=(DenseStorage&& other) EIGEN_NOEXCEPT
+     {
+       using std::swap;
+       swap(m_data, other.m_data);
+@@ -369,13 +369,13 @@
+       return *this;
+     }    
+ #ifdef EIGEN_HAVE_RVALUE_REFERENCES
+-    DenseStorage(DenseStorage&& other)
++    DenseStorage(DenseStorage&& other) EIGEN_NOEXCEPT
+       : m_data(std::move(other.m_data))
+       , m_cols(std::move(other.m_cols))
+     {
+       other.m_data = nullptr;
+     }
+-    DenseStorage& operator=(DenseStorage&& other)
++    DenseStorage& operator=(DenseStorage&& other) EIGEN_NOEXCEPT
+     {
+       using std::swap;
+       swap(m_data, other.m_data);
+@@ -435,13 +435,13 @@
+       return *this;
+     }    
+ #ifdef EIGEN_HAVE_RVALUE_REFERENCES
+-    DenseStorage(DenseStorage&& other)
++    DenseStorage(DenseStorage&& other) EIGEN_NOEXCEPT
+       : m_data(std::move(other.m_data))
+       , m_rows(std::move(other.m_rows))
+     {
+       other.m_data = nullptr;
+     }
+-    DenseStorage& operator=(DenseStorage&& other)
++    DenseStorage& operator=(DenseStorage&& other) EIGEN_NOEXCEPT
+     {
+       using std::swap;
+       swap(m_data, other.m_data);

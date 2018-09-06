@@ -1,0 +1,21 @@
+--- PacketMath.h
++++ PacketMath.h
+@@ -746,17 +751,17 @@ template<> struct packet_traits<double> 
+   typedef Packet2d half;
+   enum {
+     Vectorizable = 1,
+     AlignedOnScalar = 1,
+     size=2,
+     HasHalfPacket = 0,
+ 
+     HasDiv  = 1,
+-    HasExp  = 0,
++    HasExp  = 1,
+     HasSqrt = 0
+   };
+ };
+ 
+ template<> struct unpacket_traits<Packet2d> { typedef double type; enum {size=2}; typedef Packet2d half; };
+ 
+ 
+ inline std::ostream & operator <<(std::ostream & s, const Packet2d & v)
