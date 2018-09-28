@@ -27,7 +27,6 @@
 
 #include "surface_mesh/Surface_mesh.h"
 #include "transport_map.h"
-#include "details/line_Search.h"
 
 namespace otmap {
 
@@ -112,7 +111,6 @@ protected:
    typedef Eigen::SimplicialLDLT< Eigen::SparseMatrix<double> > LaplacianSolver;
 #endif
   LaplacianSolver m_laplacian_solver;
-  QuadraticLineSearch m_line_search;
 
   int m_verbose_level;
 

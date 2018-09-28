@@ -97,10 +97,6 @@ init(int n)
   m_element_area = 1.0/(double(n)*double(n));
   
   this->initialize_laplacian_solver();
-  m_line_search.pre_allocate(pb_size());
-  m_line_search.attach_residual_func([this](ConstRefVector x,Ref<VectorXd> r){ return this->compute_residual(x,r); });
-  m_line_search.set_tolerance_and_bounds(0.5e-2, 0., 2.);
-  m_line_search.set_verbose_level(m_verbose_level);
   timer.stop();
 
   if(m_verbose_level>=1)
@@ -213,18 +209,6 @@ GridBasedTransportSolver::solve(ConstRefVector in_density, SolverOptions opt)
 
     // solve 1D line-search problem using an exact quartic formulation of the error function
     residual = solve_1D_problem(xk, d, rk, residual, /* out */ xkp1, /* out */ rkp1, &alpha);
-
-    // double prev_res = residual;
-    // residual = m_line_search(xk, d, /* out */ xkp1, /* out */ rkp1, prev_res, &alpha);
-    // if(residual > prev_res)
-    // {
-    //   std::cout << "==== NEED TO GO BACKWARD ====\n";
-    //   std::cout << prev_res << " -> " << residual << " -> ";
-    //   //d = -d;
-    //   d = d_hat;
-    //   residual = m_line_search(xk, d, xkp1, rkp1, prev_res, &alpha);
-    //   std::cout << residual << "\n";
-    // }
 
     // prepare for next iteration:
     xk.swap(xkp1); // same as xk = xkp1 but faster
