@@ -20,6 +20,7 @@
 #include "details/nested_dissection.h"
 #include "utils/mesh_utils.h"
 #include "utils/BenchTimer.h"
+#include <Eigen/Eigenvalues>
 
 using namespace Eigen;
 using namespace surface_mesh;
@@ -125,6 +126,9 @@ GridBasedTransportSolver::solve(ConstRefVector in_density, SolverOptions opt)
   adjust_density(*p_density, opt.max_ratio);
   m_input_density = p_density.get();
 
+  // initialize cache of vertex gradient at psi=0
+  m_cache_1D_g0.setZero(m_mesh->vertices_size(), 2);
+
   // current and next solution
   VectorXd xk   = VectorXd::Zero(n);
   VectorXd xkp1 = VectorXd::Zero(n);
@@ -206,17 +210,21 @@ GridBasedTransportSolver::solve(ConstRefVector in_density, SolverOptions opt)
     //------------------------------------------------------------
 
     alpha = 0;
-    double prev_res = residual;
-    residual = m_line_search(xk, d, /* out */ xkp1, /* out */ rkp1, prev_res, &alpha);
 
-    if(residual > prev_res)
-    {
-      std::cout << "==== NEED TO GO BACKWARD ====\n";
-      std::cout << prev_res << " -> " << residual << " -> ";
-      d = -d;
-      residual = m_line_search(xk, d, xkp1, rkp1, prev_res, &alpha);
-      std::cout << residual << "\n";
-    }
+    // solve 1D line-search problem using an exact quartic formulation of the error function
+    residual = solve_1D_problem(xk, d, rk, residual, /* out */ xkp1, /* out */ rkp1, &alpha);
+
+    // double prev_res = residual;
+    // residual = m_line_search(xk, d, /* out */ xkp1, /* out */ rkp1, prev_res, &alpha);
+    // if(residual > prev_res)
+    // {
+    //   std::cout << "==== NEED TO GO BACKWARD ====\n";
+    //   std::cout << prev_res << " -> " << residual << " -> ";
+    //   //d = -d;
+    //   d = d_hat;
+    //   residual = m_line_search(xk, d, xkp1, rkp1, prev_res, &alpha);
+    //   std::cout << residual << "\n";
+    // }
 
     // prepare for next iteration:
     xk.swap(xkp1); // same as xk = xkp1 but faster
@@ -447,6 +455,7 @@ void compute_face_area(VectorXd& fwd_area, const MatrixX2d& vtx_grads, int grid_
       int v01 = vid0 + j+1;
       int v11 = vid1 + j+1;
 
+      // the area of the quad is equal to half the cross product of its diagonal
       fwd_area(id) = 0.5*(  (vtx_grads(v11,0) - vtx_grads(v00,0) + e) * (vtx_grads(v01,1) - vtx_grads(v10,1) + e)
                           - (vtx_grads(v11,1) - vtx_grads(v00,1) + e) * (vtx_grads(v01,0) - vtx_grads(v10,0) - e) );
     }
@@ -471,6 +480,146 @@ compute_residual(ConstRefVector psi, Ref<VectorXd> out) const
   return ret;
 }
 
+void
+GridBasedTransportSolver::
+compute_1D_problem_parameters(Ref<const VectorXd> psi, Ref<const VectorXd> dir, Ref<VectorXd> a, Ref<VectorXd> b) const
+{
+  // compute a, b, c, such that:
+  // r(psi+t*dir) = a*t^2 + b*t + r(psi)
+  int nv = m_mesh->vertices_size();
+  MatrixX2d &g0(m_cache_1D_g0);
+  MatrixX2d &gd(m_cache_1D_gd);
+  // No need to recompute the vertex gradient at psi,
+  // we already have them from the previous 1D solve.
+  // compute_vertex_gradients(psi, g0);
+  compute_vertex_gradients(dir, gd);
+  
+  using namespace Eigen::internal;
+  typedef packet_traits<double>::type Packet;
+  const Index PacketSize = packet_traits<double>::size;
+  Index simd_size = (m_gridSize/PacketSize)*PacketSize;
+  Packet p05 = pset1<Packet>(0.5);
+  const double e = 1./double(m_gridSize);
+  Packet pe  = pset1<Packet>(e);
+
+  for(int i=0; i<m_gridSize; ++i){
+    int vid0 = i*(m_gridSize+1);
+    int vid1 = (i+1)*(m_gridSize+1);
+
+    for(int j=0; j<simd_size; j+=PacketSize){
+      int id = j+i*m_gridSize;
+      int v00 = vid0 + j;
+      int v10 = vid1 + j;
+      int v01 = vid0 + j+1;
+      int v11 = vid1 + j+1;
+
+      Packet diag0a_x = g0.packet<Unaligned>(v11,0) - g0.packet<Unaligned>(v00,0) + pe;
+      Packet diag0a_y = g0.packet<Unaligned>(v11,1) - g0.packet<Unaligned>(v00,1) + pe;
+      Packet diag0b_x = g0.packet<Unaligned>(v01,0) - g0.packet<Unaligned>(v10,0) - pe;
+      Packet diag0b_y = g0.packet<Unaligned>(v01,1) - g0.packet<Unaligned>(v10,1) + pe;
+
+      Packet dda_x = gd.packet<Unaligned>(v11,0) - gd.packet<Unaligned>(v00,0);
+      Packet dda_y = gd.packet<Unaligned>(v11,1) - gd.packet<Unaligned>(v00,1);
+      Packet ddb_x = gd.packet<Unaligned>(v01,0) - gd.packet<Unaligned>(v10,0);
+      Packet ddb_y = gd.packet<Unaligned>(v01,1) - gd.packet<Unaligned>(v10,1);
+
+      // The comment line corresponds to r(psi), but we already have it at hand
+      // c.writePacket<Unaligned>(id, p05*( diag0a_x * diag0b_y - diag0a_y * diag0b_x ) - pe*pe*m_input_density->packet<Unaligned>(id));
+      a.writePacket<Unaligned>(id, p05*( dda_x * ddb_y - dda_y * ddb_x));
+      b.writePacket<Unaligned>(id, p05*( dda_x * diag0b_y - dda_y * diag0b_x  +  diag0a_x * ddb_y - diag0a_y * ddb_x ));
+    }
+
+    for(int j=simd_size; j<m_gridSize; ++j){
+      int id = j+i*m_gridSize;
+      int v00 = vid0 + j;
+      int v10 = vid1 + j;
+      int v01 = vid0 + j+1;
+      int v11 = vid1 + j+1;
+
+      double diag0a_x = g0(v11,0) - g0(v00,0) + e;
+      double diag0a_y = g0(v11,1) - g0(v00,1) + e;
+      double diag0b_x = g0(v01,0) - g0(v10,0) - e;
+      double diag0b_y = g0(v01,1) - g0(v10,1) + e;
+
+      double dda_x = gd(v11,0) - gd(v00,0);
+      double dda_y = gd(v11,1) - gd(v00,1);
+      double ddb_x = gd(v01,0) - gd(v10,0);
+      double ddb_y = gd(v01,1) - gd(v10,1);
+
+      // the comment line corresponds to r(psi), but we already have it at hand
+      // c(id) = 0.5*( diag0a_x * diag0b_y - diag0a_y * diag0b_x ) - e*e*(*m_input_density)(id);
+      a(id) = 0.5*( dda_x * ddb_y - dda_y * ddb_x);
+      b(id) = 0.5*( dda_x * diag0b_y - dda_y * diag0b_x  +  diag0a_x * ddb_y - diag0a_y * ddb_x );
+    }
+  }
+}
+
+double
+GridBasedTransportSolver::
+solve_1D_problem(ConstRefVector xk, ConstRefVector dir, ConstRefVector rk, double ek, RefVector xk1, RefVector rk1, double *palpha) const
+{
+  // define aliases
+  VectorXd &a(m_cache_1D_a);
+  VectorXd &b(m_cache_1D_b);
+  a.resize(xk.size());
+  b.resize(xk.size());
+
+  compute_1D_problem_parameters(xk, dir, a, b); // ~60%
+
+  // we have: r(xk+t*dir) = rk + a*t^2 + b*t
+  // and thus we have: e(xk+t*dir) = r^2 = (1,t,t^2,t^3,t^4) * z
+  // with z:
+  Matrix<double,5,1> z;
+  z <<  ek*m_element_area, // == rk.squaredNorm()
+        2.*b.dot(rk),
+        b.squaredNorm()+2*a.dot(rk),
+        2.*a.dot(b),
+        a.squaredNorm(); // ~15%
+
+  // Compute w such that "d e/dt = (1,t,t^2,t^3) * w":
+  Matrix<double,4,1> w;
+  w << z(1), 2.*z(2), 3.*z(3), 4.*z(4);
+
+  // Find the roots of "d e/dt = (1,t,t^2,t^3) * w" using the companion matrix C
+  Matrix3d C(3,3);
+  C.setZero();
+  C.bottomLeftCorner(2,2).setIdentity();
+  C.col(2) = -w.head(3)/w(3);
+  EigenSolver<Matrix3d> eig(C);
+  // Pick the one being real, close to the [0,1] ideal range, and leading to minimal residual.
+  // Note that in most cases there is a single real root, which makes sense as we expect e(t) to be convex.
+  double rmin = 0;
+  double alpha = 0;
+  bool found = false;
+  for(int k=0; k<3; ++k)
+  {
+    std::complex<double> root = eig.eigenvalues()(k);
+    if(root.imag()==0. && root.real()>=-10. && root.real()<=10.) {
+      double t = root.real();
+      // evaluate r^2 at t:
+      double r = z(0) + t*(z(1)+t*(z(2)+t*(z(3)+t*z(4))));
+      if((!found) || (r<rmin)) {
+        found = true;
+        alpha = t;
+        rmin = r;
+      }
+    }
+  }
+  if(!found) {
+    alpha = 0.5;
+    rmin = z(0) + alpha*(z(1)+alpha*(z(2)+alpha*(z(3)+alpha*z(4))));
+  }
+
+  if(palpha)
+    *palpha = alpha;
+  xk1 = xk + alpha * dir; // ~10%
+
+  // The following three lines are equivalent to compute_residual(xk1, rk1)
+  // but exploiting the 1D formulation.
+  m_cache_1D_g0 += alpha * m_cache_1D_gd; // ~10%
+  rk1 = a*(alpha*alpha)+b*alpha+rk;       // ~10%
+  return rmin/m_element_area; // == rk1.squaredNorm()/m_element_area;
+}
 
 void
 GridBasedTransportSolver::

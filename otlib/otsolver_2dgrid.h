@@ -61,6 +61,7 @@ public:
 protected:
 
   typedef Eigen::Ref<const Eigen::VectorXd> ConstRefVector;
+  typedef Eigen::Ref<Eigen::VectorXd>       RefVector;
 
   /** Assemble and factorize all operators */
   void initialize_laplacian_solver();
@@ -76,6 +77,10 @@ protected:
   double compute_residual(ConstRefVector psi, Eigen::Ref<Eigen::VectorXd> out) const;
 
   double compute_conjugate_jacobian_beta(ConstRefVector xk, ConstRefVector rkm1, ConstRefVector rk, ConstRefVector d_hat, ConstRefVector d_prev, double alpha) const;
+
+  void compute_1D_problem_parameters(ConstRefVector psi, ConstRefVector dir, RefVector a, RefVector b) const;
+
+  double solve_1D_problem(ConstRefVector xk, ConstRefVector dir, ConstRefVector rk, double ek, RefVector xk1, RefVector rk1, double *palpha = 0) const;
 
   void print_debuginfo_iteration(int it, double alpha, double beta, ConstRefVector search_dir,
                                  double l2err, ConstRefVector residual,
@@ -115,6 +120,10 @@ protected:
   mutable Eigen::VectorXd  m_cache_residual_fwd_area;
   mutable Eigen::VectorXd  m_cache_beta_Jd, m_cache_beta_rk_eps;
 
+  mutable Eigen::VectorXd  m_cache_1D_a;
+  mutable Eigen::VectorXd  m_cache_1D_b;
+  mutable Eigen::MatrixX2d m_cache_1D_g0;
+  mutable Eigen::MatrixX2d m_cache_1D_gd;
 };
 
 } // namespace otmap
