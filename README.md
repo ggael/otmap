@@ -17,14 +17,14 @@ This code comes with 3 demos:
 ```
 $ ./barycenters -in ../data/shape?instant.png -blur 5 -steps 4 -inv -img_eps 1e-3 -th 1e-7 -out shape
 ```
-![bilinear barycenters](https://github.com/ggael/otmap/master/doc/bilinear_barycenters.png "Bilinear barycenters")
+![bilinear barycenters](https://raw.githubusercontent.com/ggael/otmap/master/data/bilinear_barycenters.png "Bilinear barycenters")
 
 #### sampling
 
 ```
 $ ./stippling -in ../data/julia.png
 ```
-![stippling](https://github.com/ggael/otmap/master/data/sampling_julia.png "stippling")
+![stippling](https://raw.githubusercontent.com/ggael/otmap/master/data/sampling_julia.png "stippling")
 
 ## Installation
 
