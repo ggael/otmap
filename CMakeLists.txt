@@ -121,10 +121,10 @@ set(OTAPPUTILS_HEADER_FILES
 add_library(otapputils ${OTAPPUTILS_SRC_FILES})
 
 add_executable(otmap apps/otmap)
-target_link_libraries(otmap otlib otapputils ${ALLLIBS})
+target_link_libraries(otmap otapputils otlib ${ALLLIBS})
 
 add_executable(stippling apps/stippling.cpp)
-target_link_libraries(stippling otlib otapputils ${ALLLIBS})
+target_link_libraries(stippling otapputils otlib ${ALLLIBS})
 
 add_executable(barycenters apps/barycenters.cpp)
-target_link_libraries(barycenters otlib otapputils ${ALLLIBS})
+target_link_libraries(barycenters otapputils otlib ${ALLLIBS})

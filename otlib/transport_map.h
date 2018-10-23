@@ -19,6 +19,7 @@
 
 #include <Eigen/Core>
 #include "surface_mesh/Surface_mesh.h"
+#include <memory>
 
 namespace otmap
 {

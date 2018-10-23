@@ -12,7 +12,7 @@
 #include <vector>
 
 #include <surface_mesh/Surface_mesh.h>
-#include "otsolver_2Dgrid.h"
+#include "otsolver_2dgrid.h"
 #include "common/otsolver_options.h"
 #include "utils/rasterizer.h"
 #include "common/image_utils.h"
