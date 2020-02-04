@@ -386,8 +386,8 @@ compute_vertex_gradients(ConstRefVector psi, MatrixX2d& vtx_grads) const
       Packet p01 = psi.packet<Unaligned>(fid0+j);
       Packet p10 = psi.packet<Unaligned>(fid1+j-1);
       Packet p11 = psi.packet<Unaligned>(fid1+j);
-      vtx_grads.writePacket<Unaligned>(vid+j,0, pw05*(p10+p11-p00-p01));
-      vtx_grads.writePacket<Unaligned>(vid+j,1, pw05*(p01+p11-p00-p10));
+      vtx_grads.writePacket<Unaligned>(vid+j,0, pmul(pw05,psub(padd(p10,p11),padd(p00,p01))));
+      vtx_grads.writePacket<Unaligned>(vid+j,1, pmul(pw05,psub(padd(p01,p11),padd(p00,p10))));
     }
 
     double p00 = psi(fid0+simd_size-1);
@@ -497,20 +497,20 @@ compute_1D_problem_parameters(Ref<const VectorXd> psi, Ref<const VectorXd> dir, 
       int v01 = vid0 + j+1;
       int v11 = vid1 + j+1;
 
-      Packet diag0a_x = g0.packet<Unaligned>(v11,0) - g0.packet<Unaligned>(v00,0) + pe;
-      Packet diag0a_y = g0.packet<Unaligned>(v11,1) - g0.packet<Unaligned>(v00,1) + pe;
-      Packet diag0b_x = g0.packet<Unaligned>(v01,0) - g0.packet<Unaligned>(v10,0) - pe;
-      Packet diag0b_y = g0.packet<Unaligned>(v01,1) - g0.packet<Unaligned>(v10,1) + pe;
+      Packet diag0a_x = padd(psub(g0.packet<Unaligned>(v11,0), g0.packet<Unaligned>(v00,0)), pe);
+      Packet diag0a_y = padd(psub(g0.packet<Unaligned>(v11,1), g0.packet<Unaligned>(v00,1)), pe);
+      Packet diag0b_x = psub(psub(g0.packet<Unaligned>(v01,0), g0.packet<Unaligned>(v10,0)), pe);
+      Packet diag0b_y = padd(psub(g0.packet<Unaligned>(v01,1), g0.packet<Unaligned>(v10,1)), pe);
 
-      Packet dda_x = gd.packet<Unaligned>(v11,0) - gd.packet<Unaligned>(v00,0);
-      Packet dda_y = gd.packet<Unaligned>(v11,1) - gd.packet<Unaligned>(v00,1);
-      Packet ddb_x = gd.packet<Unaligned>(v01,0) - gd.packet<Unaligned>(v10,0);
-      Packet ddb_y = gd.packet<Unaligned>(v01,1) - gd.packet<Unaligned>(v10,1);
+      Packet dda_x = psub(gd.packet<Unaligned>(v11,0), gd.packet<Unaligned>(v00,0));
+      Packet dda_y = psub(gd.packet<Unaligned>(v11,1), gd.packet<Unaligned>(v00,1));
+      Packet ddb_x = psub(gd.packet<Unaligned>(v01,0), gd.packet<Unaligned>(v10,0));
+      Packet ddb_y = psub(gd.packet<Unaligned>(v01,1), gd.packet<Unaligned>(v10,1));
 
       // The comment line corresponds to r(psi), but we already have it at hand
       // c.writePacket<Unaligned>(id, p05*( diag0a_x * diag0b_y - diag0a_y * diag0b_x ) - pe*pe*m_input_density->packet<Unaligned>(id));
-      a.writePacket<Unaligned>(id, p05*( dda_x * ddb_y - dda_y * ddb_x));
-      b.writePacket<Unaligned>(id, p05*( dda_x * diag0b_y - dda_y * diag0b_x  +  diag0a_x * ddb_y - diag0a_y * ddb_x ));
+      a.writePacket<Unaligned>(id, pmul(p05, psub(pmul(dda_x, ddb_y), pmul(dda_y, ddb_x))));
+      b.writePacket<Unaligned>(id, pmul(p05, psub(padd(psub(pmul(dda_x, diag0b_y), pmul(dda_y, diag0b_x)), pmul(diag0a_x, ddb_y)), pmul(diag0a_y, ddb_x)) ));
     }
 
     for(int j=simd_size; j<m_gridSize; ++j){
