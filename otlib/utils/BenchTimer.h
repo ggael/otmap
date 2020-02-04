@@ -27,15 +27,20 @@
 # include <unistd.h>
 #endif
 
+#include <Eigen/Core>
+
+
 static void escape(void *p) {
+  #if EIGEN_COMP_GNUC
   asm volatile("" : : "g"(p) : "memory");
+  #endif
 }
 
 static void clobber() {
+  #if EIGEN_COMP_GNUC
   asm volatile("" : : : "memory");
+  #endif
 }
-
-#include <Eigen/Core>
 
 namespace Eigen
 {
